@@ -199,6 +199,9 @@ int main() {
     }
 
 
+
+
+
     printf("%d\n", time);
     printf("%d\n%d\n", camionCapacity, refillFrequency);
     print_cookbook();
