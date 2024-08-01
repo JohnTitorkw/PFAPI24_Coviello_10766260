@@ -109,8 +109,7 @@ void print_cookbook() { //support function to see the entire cookbook
 }
 
 //this is what I will do today
-
-
+/*
 Recipe *hash_table_delete(const char *name) {
     const int index = hash(name);
     Recipe *tmp = cookbook[index];
@@ -129,16 +128,52 @@ Recipe *hash_table_delete(const char *name) {
     return tmp;
 }
 
+char *hash_table_remove(char nome[]) {
+    int index = hash(nome);
+    ricetta *current = ricettario[index];
+    ricetta *previous = NULL;
+
+    while (current != NULL && strcmp(current->ricetta, nome) != 0) {
+        previous = current;
+        current = current->next;
+    }
+
+    // Elemento non trovato
+    if (current == NULL) {
+        return "non presente\n";
+    }
+
+    // Elemento trovato
+    if (previous == NULL) {
+        // L'elemento da rimuovere è il primo nella lista
+        ricettario[index] = current->next;
+    } else {
+        // L'elemento da rimuovere non è il primo nella lista
+        previous->next = current->next;
+    }
+
+    free(current);  // Libera la memoria allocata per l'elemento
+    return "rimossa\n";
+}
+
+*/
+
+
 
 int main() {
     init_hash_table();
+    int time=0;
+    int camionCapacity=0;
+    int refillFrequency=0;
     char line[MAX_LINE_LENGHT];
     char command[19];
     char recipeName[50];
     int quantity = 0;
 
+    scanf("%d %d", &camionCapacity, &refillFrequency);
     while (fgets(line, sizeof(line), stdin)) {
         if (sscanf(line, "%18s", command) == 1) {
+            time ++;
             if (strcmp(command, "aggiungi_ricetta") == 0) {
                 char* cursor = line + strlen("aggiungi_ricetta ");
                 if (sscanf(cursor, "%49s", recipeName) != 1) {
@@ -170,5 +205,8 @@ int main() {
     }
 
     print_cookbook();
+    printf("%d\n", time);
+    printf("%d\n%d\n", camionCapacity, refillFrequency);
+
     return 0;
 }
