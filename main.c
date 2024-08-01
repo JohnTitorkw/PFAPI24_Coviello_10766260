@@ -176,7 +176,7 @@ int main() {
             time ++;
             if (strcmp(command, "aggiungi_ricetta") == 0) {
                 char* cursor = line + strlen("aggiungi_ricetta ");
-                if (sscanf(cursor, "%49s", recipeName) != 1) {
+                if (sscanf(cursor, "%s", recipeName) != 1) {
                     printf("Warning!\n");
                     return 1;
                 }
@@ -193,12 +193,19 @@ int main() {
                 }
 
                 char nomeIngrediente[255];
-                while (sscanf(cursor, "%49s %d", nomeIngrediente, &quantity) == 2) {
+                while (sscanf(cursor, "%s %d", nomeIngrediente, &quantity) == 2) {
                     recipe_insert_at_tail(newRicetta, nomeIngrediente, quantity);
                     cursor += strlen(nomeIngrediente);
                     while (*cursor == ' ') cursor++; // Salta gli spazi
                     cursor += snprintf(NULL, 0, "%d", quantity); // Calcola la lunghezza della quantità come stringa
                     while (*cursor == ' ') cursor++; // Salta gli spazi
+                }
+            }
+            else if (strcmp(command, "rimuovi_ricetta") == 0) {
+                char* cursor = line + strlen("rimuovi_ricetta ");
+                if (sscanf(cursor, "%s", recipeName) != 1) {
+                    printf("Warning!\n");
+                    return 1;
                 }
             }
         }
