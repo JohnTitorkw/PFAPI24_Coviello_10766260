@@ -108,55 +108,41 @@ void print_cookbook() { //support function to see the entire cookbook
     printf("End\n");
 }
 
-//this is what I will do today
-/*
-Recipe *hash_table_delete(const char *name) {
-    const int index = hash(name);
-    Recipe *tmp = cookbook[index];
+char *remove_recipe(char name[]) {
+    int index = hash(name);
+    Recipe *current = cookbook[index];
     Recipe *prev = NULL;
-    while (tmp != NULL && strncmp(tmp->recipeName, name, MAX_NAME) != 0) {
-        prev = tmp;
-        tmp = tmp->next;
-    }
-    if (tmp == NULL) return NULL;
-    if (prev == NULL) {
-        // deleting the head
-        cookbook[index] = tmp->next;
-    } else {
-        prev->next = tmp->next;
-    }
-    return tmp;
-}
 
-char *hash_table_remove(char nome[]) {
-    int index = hash(nome);
-    ricetta *current = ricettario[index];
-    ricetta *previous = NULL;
-
-    while (current != NULL && strcmp(current->ricetta, nome) != 0) {
-        previous = current;
+    while (current != NULL && strcmp(current->recipeName, name) != 0) {
+        prev = current;
         current = current->next;
     }
 
-    // Elemento non trovato
+    // Element not found
     if (current == NULL) {
         return "non presente\n";
     }
 
-    // Elemento trovato
-    if (previous == NULL) {
-        // L'elemento da rimuovere è il primo nella lista
-        ricettario[index] = current->next;
+    // Element found
+    if (prev == NULL) {
+        // deleating the head
+        cookbook[index] = current->next;
     } else {
-        // L'elemento da rimuovere non è il primo nella lista
-        previous->next = current->next;
+        prev->next = current->next;
     }
 
-    free(current);  // Libera la memoria allocata per l'elemento
+    Ingredient *currentIngredient = current->head;
+    while (currentIngredient != NULL) {
+        Ingredient *tmp = currentIngredient;
+        currentIngredient = currentIngredient->next;
+        free(tmp); //free the memory of all the ingredients
+    }
+
+    free(current);  // free the memory reserved for the element
     return "rimossa\n";
 }
 
-*/
+//todo: struttura per il magazzino e gestione rifornimento
 
 
 
@@ -196,9 +182,9 @@ int main() {
                 while (sscanf(cursor, "%s %d", nomeIngrediente, &quantity) == 2) {
                     recipe_insert_at_tail(newRicetta, nomeIngrediente, quantity);
                     cursor += strlen(nomeIngrediente);
-                    while (*cursor == ' ') cursor++; // Salta gli spazi
-                    cursor += snprintf(NULL, 0, "%d", quantity); // Calcola la lunghezza della quantità come stringa
-                    while (*cursor == ' ') cursor++; // Salta gli spazi
+                    while (*cursor == ' ') cursor++; // ignore spaces
+                    cursor += snprintf(NULL, 0, "%d", quantity); // consider the quantity lenght as a string
+                    while (*cursor == ' ') cursor++; // ignore spaces
                 }
             }
             else if (strcmp(command, "rimuovi_ricetta") == 0) {
@@ -207,13 +193,15 @@ int main() {
                     printf("Warning!\n");
                     return 1;
                 }
+                printf("%s", remove_recipe(recipeName));
             }
         }
     }
 
-    print_cookbook();
+
     printf("%d\n", time);
     printf("%d\n%d\n", camionCapacity, refillFrequency);
+    print_cookbook();
 
     return 0;
 }

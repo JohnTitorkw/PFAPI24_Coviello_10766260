@@ -2,16 +2,16 @@
 triple:          'x86_64-apple-darwin'
 binary-path:     a.out
 relocations:
-  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _create_new_ingredient, symObjAddr: 0x0, symBinAddr: 0x1000005B0, symSize: 0x50 }
-  - { offsetInCU: 0x4D, offset: 0x4D, size: 0x8, addend: 0x0, symName: _cookbook, symBinAddr: 0x100002000, symSize: 0x0 }
-  - { offsetInCU: 0x124, offset: 0x124, size: 0x8, addend: 0x0, symName: _create_new_ingredient, symObjAddr: 0x0, symBinAddr: 0x1000005B0, symSize: 0x50 }
-  - { offsetInCU: 0x186, offset: 0x186, size: 0x8, addend: 0x0, symName: _recipe_insert_at_tail, symObjAddr: 0x50, symBinAddr: 0x100000600, symSize: 0x70 }
-  - { offsetInCU: 0x1EE, offset: 0x1EE, size: 0x8, addend: 0x0, symName: _print_list_of_ingredients_from_head, symObjAddr: 0xC0, symBinAddr: 0x100000670, symSize: 0x50 }
-  - { offsetInCU: 0x214, offset: 0x214, size: 0x8, addend: 0x0, symName: _hash, symObjAddr: 0x110, symBinAddr: 0x1000006C0, symSize: 0x70 }
-  - { offsetInCU: 0x24C, offset: 0x24C, size: 0x8, addend: 0x0, symName: _init_hash_table, symObjAddr: 0x180, symBinAddr: 0x100000730, symSize: 0x20 }
-  - { offsetInCU: 0x2CA, offset: 0x2CA, size: 0x8, addend: 0x0, symName: _hash_table_lookup, symObjAddr: 0x1A0, symBinAddr: 0x100000750, symSize: 0xA0 }
-  - { offsetInCU: 0x325, offset: 0x325, size: 0x8, addend: 0x0, symName: _hash_table_insert, symObjAddr: 0x240, symBinAddr: 0x1000007F0, symSize: 0xA0 }
-  - { offsetInCU: 0x3A9, offset: 0x3A9, size: 0x8, addend: 0x0, symName: _print_ricettario, symObjAddr: 0x2E0, symBinAddr: 0x100000890, symSize: 0x100 }
-  - { offsetInCU: 0x414, offset: 0x414, size: 0x8, addend: 0x0, symName: _hash_table_delete, symObjAddr: 0x3E0, symBinAddr: 0x100000990, symSize: 0x100 }
-  - { offsetInCU: 0x542, offset: 0x542, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x4E0, symBinAddr: 0x100000A90, symSize: 0x425 }
+  - { offsetInCU: 0x26, offset: 0x26, size: 0x8, addend: 0x0, symName: _create_new_ingredient, symObjAddr: 0x0, symBinAddr: 0x100001310, symSize: 0x50 }
+  - { offsetInCU: 0x4D, offset: 0x4D, size: 0x8, addend: 0x0, symName: _cookbook, symBinAddr: 0x100003000, symSize: 0x0 }
+  - { offsetInCU: 0x124, offset: 0x124, size: 0x8, addend: 0x0, symName: _create_new_ingredient, symObjAddr: 0x0, symBinAddr: 0x100001310, symSize: 0x50 }
+  - { offsetInCU: 0x186, offset: 0x186, size: 0x8, addend: 0x0, symName: _recipe_insert_at_tail, symObjAddr: 0x50, symBinAddr: 0x100001360, symSize: 0x70 }
+  - { offsetInCU: 0x1EE, offset: 0x1EE, size: 0x8, addend: 0x0, symName: _print_list_of_ingredients_from_head, symObjAddr: 0xC0, symBinAddr: 0x1000013D0, symSize: 0x50 }
+  - { offsetInCU: 0x214, offset: 0x214, size: 0x8, addend: 0x0, symName: _hash, symObjAddr: 0x110, symBinAddr: 0x100001420, symSize: 0x70 }
+  - { offsetInCU: 0x24C, offset: 0x24C, size: 0x8, addend: 0x0, symName: _init_hash_table, symObjAddr: 0x180, symBinAddr: 0x100001490, symSize: 0x20 }
+  - { offsetInCU: 0x2CA, offset: 0x2CA, size: 0x8, addend: 0x0, symName: _hash_table_lookup, symObjAddr: 0x1A0, symBinAddr: 0x1000014B0, symSize: 0xA0 }
+  - { offsetInCU: 0x325, offset: 0x325, size: 0x8, addend: 0x0, symName: _hash_table_insert, symObjAddr: 0x240, symBinAddr: 0x100001550, symSize: 0xA0 }
+  - { offsetInCU: 0x3A9, offset: 0x3A9, size: 0x8, addend: 0x0, symName: _print_cookbook, symObjAddr: 0x2E0, symBinAddr: 0x1000015F0, symSize: 0x100 }
+  - { offsetInCU: 0x414, offset: 0x414, size: 0x8, addend: 0x0, symName: _remove_recipe, symObjAddr: 0x3E0, symBinAddr: 0x1000016F0, symSize: 0x130 }
+  - { offsetInCU: 0x595, offset: 0x595, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x510, symBinAddr: 0x100001820, symSize: 0x640 }
 ...

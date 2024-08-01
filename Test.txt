@@ -1,4 +1,4 @@
 aggiungi_ricetta op902376 farina 50 uova 10 zucchero 20
 aggiungi_ricetta torta farina 50 uova 10 zucchero 20
-aggiungi_ricetta op902376 farina 50 uova 10 zucchero 20
+rimuovi_ricetta op902376
 
