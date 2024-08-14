@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #define MAX_NAME 256
 #define TABLE_SIZE 2000
-#define MAX_LINE_LENGHT 512
+#define MAX_LINE_LENGHT 5000
 
 typedef struct Order {
     char recipeName[MAX_NAME];
@@ -60,8 +60,8 @@ Recipe *cookbook[TABLE_SIZE];
 
 unsigned int hash(const char *inputString) {//hash function
     if (inputString == NULL) {
-        fprintf(stderr, "Error: inputString is NULL\n");
-        exit(EXIT_FAILURE);
+        printf("Hash warning!\n");
+        return 1;
     }
     unsigned long hash = 5381;
     int c;
@@ -172,41 +172,46 @@ camionQueue *create_new_camion_queue() {
     return newCamionQueue;
 }
 
-void waiting_orders_queue_insert(waitingOrderQueue *queue, const char *recipeName, const int quantity, const int arrivingTime) {
+void print_waiting_orders_queue(const waitingOrderQueue *waitingOrdersQueue) {
+    if (waitingOrdersQueue == NULL) {
+        printf("WaitingOrdersQueue is NULL\n");
+        return;
+    }
+    //printf("%s", "WaitingOrdersQueue: \n");
+    Order *current = waitingOrdersQueue->head;
+    if (current == NULL) {
+        return;
+    }
+    printf("%s", "ORDINI IN ATTESA: \n");
+    while (current != NULL) {
+        printf(" %d %s %d con peso %d\n ", current->arrivingTime, current->recipeName, current->numberOfPieces, current->weight);
+        current = current->next;
+    }
+    printf("\n");
+}
+
+void waiting_orders_queue_sorted_insert(waitingOrderQueue *queue, const char *recipeName, const int quantity, const int arrivingTime) {
     Order *newOrder = create_new_order(recipeName, quantity, arrivingTime);
     if (queue->tail == NULL) { // empty list
         queue->head = newOrder;
         queue->tail = newOrder;
     }
     else {
-        queue->tail->next = newOrder;
-        newOrder->prev = queue->tail;
-        queue->tail = newOrder;
-    }
-}
-
-void camion_queue_sorted_insert(camionQueue *queue, const char *recipeName, const int quantity, const int arrivingTime) {
-    Order *newOrder = create_new_order(recipeName, quantity, arrivingTime);
-    if (queue->tail == NULL) {// empty list
-        queue->head = newOrder;
-        queue->tail = newOrder;
-    }
-    else {
         Order *current = queue->head;
-        while (current != NULL && current->arrivingTime < arrivingTime) {// check if the arriving time is less than the current order
+        while (current != NULL && current->arrivingTime < arrivingTime) { // check if the arriving time is less than the current order
             current = current->next;
         }
-        if (current == NULL) {// insert at tail
+        if (current == NULL) { // insert at tail
             queue->tail->next = newOrder;
             newOrder->prev = queue->tail;
             queue->tail = newOrder;
         }
-        else if (current->prev == NULL) {// insert at head
+        else if (current->prev == NULL) { // insert at head
             newOrder->next = queue->head;
             queue->head->prev = newOrder;
             queue->head = newOrder;
         }
-        else {// insert in the middle
+        else { // insert in the middle
             newOrder->next = current;
             newOrder->prev = current->prev;
             current->prev->next = newOrder;
@@ -215,29 +220,74 @@ void camion_queue_sorted_insert(camionQueue *queue, const char *recipeName, cons
     }
 }
 
+void print_camion_queue(const camionQueue *camionQueue) {
+    if (camionQueue == NULL) {
+        printf("CamionQueue is NULL\n");
+        return;
+    }
+    Order *current = camionQueue->head;
+    if (current == NULL) {
+        return;
+    }
+    printf("%s", "ORDINI PRONTI: \n");
+    while (current != NULL) {
+        printf(" %d %s %d con peso %d\n ", current->arrivingTime, current->recipeName, current->numberOfPieces, current->weight);
+        current = current->next;
+    }
+    printf("\n");
+}
+
+void camion_queue_sorted_insert(camionQueue *queue, const char *recipeName, const int quantity, const int arrivingTime) {
+    Order *newOrder = create_new_order(recipeName, quantity, arrivingTime);
+    if (queue->tail == NULL) { // empty list
+        queue->head = newOrder;
+        queue->tail = newOrder;
+    } else {
+        Order *current = queue->head;
+        while (current != NULL && current->arrivingTime < arrivingTime) { // check if the arriving time is less than the current order
+            current = current->next;
+        }
+        if (current == NULL) { // insert at tail
+            queue->tail->next = newOrder;
+            newOrder->prev = queue->tail;
+            queue->tail = newOrder;
+        }
+        else if (current->prev == NULL) { // insert at head
+            newOrder->next = queue->head;
+            queue->head->prev = newOrder;
+            queue->head = newOrder;
+        }
+        else { // insert in the middle
+            newOrder->next = current;
+            newOrder->prev = current->prev;
+            current->prev->next = newOrder;
+            current->prev = newOrder;
+        }
+    }
+}
 
 void camion_queue_sorted_loading_insert(camionQueue *queue, const char *recipeName, const int quantity, const int arrivingTime) {
     Order *newOrder = create_new_order(recipeName, quantity, arrivingTime);
-    if (queue->head == NULL) {// empty list
+    if (queue->head == NULL) { // empty list
         queue->head = newOrder;
         queue->tail = newOrder;
     }
     else {
         Order *current = queue->head;
-        while (current != NULL && current->weight >= newOrder->weight) {// check if the weight is less than the current order
+        while (current != NULL && current->weight >= newOrder->weight) { // check if the weight is less than the current order
             current = current->next;
         }
-        if (current == NULL) {// insert at tail
+        if (current == NULL) { // insert at tail
             queue->tail->next = newOrder;
             newOrder->prev = queue->tail;
             queue->tail = newOrder;
         }
-        else if (current->prev == NULL) {//insert at head
+        else if (current->prev == NULL) { //insert at head
             newOrder->next = queue->head;
             queue->head->prev = newOrder;
             queue->head = newOrder;
         }
-        else {// insert at middle
+        else { // insert in the middle
             newOrder->next = current;
             newOrder->prev = current->prev;
             current->prev->next = newOrder;
@@ -247,23 +297,19 @@ void camion_queue_sorted_loading_insert(camionQueue *queue, const char *recipeNa
 }
 
 void recipe_insert_at_tail(Recipe *recipe, const char *name, const int quantity) {
-    //printf("Debug: Adding ingredient %s with quantity %d to recipe %s\n", name, quantity, recipe->recipeName); // Debug print
     Ingredient *newIngredient = create_new_ingredient(name, quantity);
     if (recipe->tail == NULL) { // empty list
-        //printf("Debug: Recipe is empty, adding as first ingredient\n"); // Debug print
         recipe->head = newIngredient;
         recipe->tail = newIngredient;
     }
     else { //not empty list, adjustment needed
-        //printf("Debug: Recipe is not empty, adding to the tail\n"); // Debug print
         recipe->tail->next = newIngredient; //the new ingredient is actually the next of the previous tail
         newIngredient->prev = recipe->tail; //the prev of the new ingredient is the previous tail
         recipe->tail = newIngredient; //the recipe's tail is the new ingredient
     }
-    //printf("Debug: Ingredient %s added successfully\n", name); // Debug print
 }
 
-void print_list_of_ingredients_from_head(const Recipe *recipe) {//despite tail insert print starting from the head
+void print_list_of_ingredients_from_head(const Recipe *recipe) { //despite tail insert print starting from the head
     Ingredient* current = recipe->head;
     while (current != NULL) {
         printf("%s %d - ", current->ingredientName, current->ingredientQuantity);
@@ -287,7 +333,7 @@ Order *camion_queue_lookup(const camionQueue *queue, const char *name) {
     return current;
 }
 
-char *hash_table_insert(char name[]) {
+void hash_table_insert(char name[]) {
     Recipe *newRecipe = malloc(sizeof(Recipe));
     if (newRecipe == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -300,8 +346,6 @@ char *hash_table_insert(char name[]) {
     int index = hash(newRecipe->recipeName);
     newRecipe->next = cookbook[index];
     cookbook[index] = newRecipe;
-
-    return "aggiunta\n";
 }
 
 void print_cookbook() { //support function to see the entire cookbook
@@ -430,7 +474,7 @@ void warehouse_sorted_insert(warehouseIngredient *ingredient, const int quantity
 void hash_table_warehouse_insert(char name[], const int quantity, const int expirationDate) {
     int index = hash(name);
 
-    if (hash_table_warehouse_lookup(name) == NULL) {// Ingredient not found, create a new one
+    if (hash_table_warehouse_lookup(name) == NULL) { // Ingredient not found, create a new one
         warehouseIngredient *newWarehouseIngredient = (warehouseIngredient *)malloc(sizeof(warehouseIngredient));
         if (newWarehouseIngredient == NULL) {
             fprintf(stderr, "Memory allocation failed\n");
@@ -443,7 +487,7 @@ void hash_table_warehouse_insert(char name[], const int quantity, const int expi
         warehouse[index] = newWarehouseIngredient;
         warehouse_sorted_insert(newWarehouseIngredient, quantity, expirationDate);
     }
-    else {// Ingredient found, insert the batch
+    else { // Ingredient found, insert the batch
         warehouseIngredient *current = hash_table_warehouse_lookup(name);
         warehouse_sorted_insert(current, quantity, expirationDate);
     }
@@ -463,13 +507,16 @@ void check_expiration_date(const int time) {
                             current->head = tmp->next;
                             if (tmp->next != NULL) {
                                 tmp->next->prev = NULL;
-                            } else {
+                            }
+                            else {
                                 current->tail = NULL; // List becomes empty
                             }
-                        } else if (tmp->next == NULL) { // delete tail
+                        }
+                        else if (tmp->next == NULL) { // delete tail
                             current->tail = tmp->prev;
                             tmp->prev->next = NULL;
-                        } else { // delete in the middle
+                        }
+                        else { // delete in the middle
                             tmp->prev->next = tmp->next;
                             tmp->next->prev = tmp->prev;
                         }
@@ -518,9 +565,11 @@ int check_orders_executability(const Order *order) {
 
         int neededQuantity = current->ingredientQuantity * order->numberOfPieces;
         Batch *batch = ingredient->head;
-
+        //printf("PREPARAZIONE DELL'ORDINE : %d %s %d \n", order->arrivingTime, order->recipeName, order->numberOfPieces);
         // Iterate through batches and check availability
         while (batch != NULL && neededQuantity > 0) {
+            //printf("Debug - Ingredient: %s, needed quantity: %d\n", ingredient->name, neededQuantity);
+            //print_list_of_batches_from_head(ingredient);
             if (batch->quantity > neededQuantity) {
                 batch->isUsed = true;
                 neededQuantity -= batch->quantity;
@@ -574,11 +623,12 @@ void execute_order(const Order *order) {
         return;
     }
     Batch *batch = ingredient->head;
-
+    //printf("PREPARAZIONE DELL'ORDINE : %d %s %d \n", order->arrivingTime, order->recipeName, order->numberOfPieces);
     while (current != NULL) {
         int neededQuantity = current->ingredientQuantity * order->numberOfPieces;
         //printf("Debug: Processing ingredient %s, needed quantity: %d\n", current->ingredientName, neededQuantity); // Debug print
-        while (batch != NULL) {
+        //print_list_of_batches_from_head(ingredient); // Debug print
+        while (batch != NULL && neededQuantity > 0) {
             //printf("Debug: Processing batch with quantity %d\n", batch->quantity); // Debug print
             if (batch->isUsed == true) {
                 int ingredientReduction = batch->quantity;
@@ -606,10 +656,12 @@ void execute_order(const Order *order) {
                     Batch *temp = batch;
                     batch = batch->next;
                     free(temp);
-                } else {
+                }
+                else {
                     batch = batch->next;
                 }
-            } else {
+            }
+            else {
                 batch = batch->next;
             }
         }
@@ -626,22 +678,25 @@ void execute_order(const Order *order) {
 }
 
 void process_order(const Order *order, waitingOrderQueue *waitingOrderQueue, camionQueue *camionQueue) {
-    if (check_orders_executability(order) == 1) {
+    //printf("Debug: Processing order for recipe %s, quantity %d, arriving time %d\n", order->recipeName, order->numberOfPieces, order->arrivingTime);
+
+    int executability = check_orders_executability(order);
+    //printf("Debug: Order executability for recipe %s: %d\n", order->recipeName, executability);
+
+    if (executability == 1) {
         camion_queue_sorted_insert(camionQueue, order->recipeName, order->numberOfPieces, order->arrivingTime);
         execute_order(order);
-        printf("%s", "accettato\n");
-
     }
     else {
-        waiting_orders_queue_insert(waitingOrderQueue, order->recipeName, order->numberOfPieces, order->arrivingTime);
+        waiting_orders_queue_sorted_insert(waitingOrderQueue, order->recipeName, order->numberOfPieces, order->arrivingTime);
         reset_isUsed_flag();
-        printf("%s", "accettato\n");
     }
 }
 
 void process_waiting_orders(waitingOrderQueue *waitingOrderQueue, camionQueue *camionQueue) {
     Order *current = waitingOrderQueue->head;
     while (current != NULL) {
+
         Order *next = current->next; // Save the next order before possibly freeing current
         if (check_orders_executability(current) == 1) {
             camion_queue_sorted_insert(camionQueue, current->recipeName, current->numberOfPieces, current->arrivingTime);
@@ -661,49 +716,15 @@ void process_waiting_orders(waitingOrderQueue *waitingOrderQueue, camionQueue *c
                 waitingOrderQueue->tail = current->prev;
                 current->prev->next = NULL;
             }
-            else {// delete in the middle
+            else { // delete in the middle
                 current->prev->next = current->next;
                 current->next->prev = current->prev;
             }
 
-            free(current);// Free the memory for the processed order
+            free(current); // Free the memory for the processed order
         }
-        current = next;// Move to the next order
+        current = next; // Move to the next order
     }
-}
-
-void print_camion_queue(const camionQueue *camionQueue) {
-    if (camionQueue == NULL) {
-        printf("CamionQueue is NULL\n");
-        return;
-    }
-    printf("%s", "CamionQueue: \n");
-    Order *current = camionQueue->head;
-    if (current == NULL) {
-        return;
-    }
-    while (current != NULL) {
-        printf("%d %s  %d - ", current->arrivingTime, current->recipeName, current->numberOfPieces);
-        current = current->next;
-    }
-    printf("\n");
-}
-
-void print_waiting_orders_queue(const waitingOrderQueue *waitingOrdersQueue) {
-    if (waitingOrdersQueue == NULL) {
-        printf("WaitingOrdersQueue is NULL\n");
-        return;
-    }
-    printf("%s", "WaitingOrdersQueue: \n");
-    Order *current = waitingOrdersQueue->head;
-    if (current == NULL) {
-        return;
-    }
-    while (current != NULL) {
-        printf("%s %d %d - ", current->recipeName, current->numberOfPieces, current->arrivingTime);
-        current = current->next;
-    }
-    printf("\n");
 }
 
 camionQueue *select_orders_to_load(camionQueue *queue, int camionCapacity) {
@@ -719,20 +740,20 @@ camionQueue *select_orders_to_load(camionQueue *queue, int camionCapacity) {
         camion_queue_sorted_loading_insert(selectedOrders, current->recipeName, current->numberOfPieces, current->arrivingTime);
 
         // Remove current order from camionQueue
-        if (current->prev == NULL) {// delete head
+        if (current->prev == NULL) { // delete head
             queue->head = current->next;
             if (current->next != NULL) {
                 current->next->prev = NULL;
             }
             else {
-                queue->tail = NULL;// List becomes empty
+                queue->tail = NULL; // List becomes empty
             }
         }
         else if (current->next == NULL) { // delete tail
             queue->tail = current->prev;
             current->prev->next = NULL;
         }
-        else {// delete in the middle
+        else { // delete in the middle
             current->prev->next = current->next;
             current->next->prev = current->prev;
         }
@@ -743,33 +764,81 @@ camionQueue *select_orders_to_load(camionQueue *queue, int camionCapacity) {
 }
 
 void load_camion(camionQueue *queue, const int camionCapacity) {
-    camionQueue *selectedOrders = select_orders_to_load(queue, camionCapacity);
+    camionQueue *loadingOrders = select_orders_to_load(queue, camionCapacity);
 
-    if (selectedOrders == NULL) {
-        printf("selectedOrders queue is NULL\n");
-        return;
-    }
-
-    if (selectedOrders->head == NULL) {
+    if (loadingOrders == NULL || loadingOrders->head == NULL) {
         printf("%s", "camioncino vuoto\n");
     }
     else {
-        Order *current = selectedOrders->head;
+        Order *current = loadingOrders->head;
         while (current != NULL) {
             printf("%d %s %d\n", current->arrivingTime, current->recipeName, current->numberOfPieces);
             current = current->next;
         }
     }
     // Free the selectedOrders queue
-        Order *current = selectedOrders->head;
+    if (loadingOrders != NULL) {
+        Order *current = loadingOrders->head;
         while (current != NULL) {
             Order *next = current->next;
             free(current);
             current = next;
         }
-        free(selectedOrders);
+        free(loadingOrders);
+    }
 }
 
+void free_queues(camionQueue *camionQueue, waitingOrderQueue *waitingOrderQueue) {
+    Order *current = camionQueue->head;
+    while (current != NULL) {
+        Order *tmp = current;
+        current = current->next;
+        free(tmp);
+    }
+    free(camionQueue);
+
+    current = waitingOrderQueue->head;
+    while (current != NULL) {
+        Order *tmp = current;
+        current = current->next;
+        free(tmp);
+    }
+    free(waitingOrderQueue);
+}
+
+void free_everything(camionQueue *camionQueue, waitingOrderQueue *waitingOrderQueue) {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        if (cookbook[i] != NULL) {
+            Recipe *current = cookbook[i];
+            while (current != NULL) {
+                Recipe *tmp = current;
+                current = current->next;
+                Ingredient *currentIngredient = tmp->head;
+                while (currentIngredient != NULL) {
+                    Ingredient *tmpIngredient = currentIngredient;
+                    currentIngredient = currentIngredient->next;
+                    free(tmpIngredient);
+                }
+                free(tmp);
+            }
+        }
+        if (warehouse[i] != NULL) {
+            warehouseIngredient *current = warehouse[i];
+            while (current != NULL) {
+                warehouseIngredient *tmp = current;
+                current = current->next;
+                Batch *currentBatch = tmp->head;
+                while (currentBatch != NULL) {
+                    Batch *tmpBatch = currentBatch;
+                    currentBatch = currentBatch->next;
+                    free(tmpBatch);
+                }
+                free(tmp);
+            }
+        }
+    }
+    free_queues(camionQueue, waitingOrderQueue);
+}
 
 int main() {
     init_hash_tables();
@@ -778,99 +847,73 @@ int main() {
     int time=0;
     int camionCapacity=0;
     int refillFrequency=0;
-    char line[MAX_LINE_LENGHT];
     int quantity = 0;
-    int expirationDate;
-    int numOfPieces;
-
+    int expirationDate = 0;
+    int numOfPieces = 0;
+    char command[MAX_NAME];
 
     scanf("%d %d", &refillFrequency, &camionCapacity);
-    while (fgets(line, sizeof(line), stdin) != NULL) {
-        char command[19];
-        char *cursor = line;
+    while (scanf("%s", command) != EOF) {
         if (time != 0 && time % refillFrequency == 0) {
-            //print_camion_queue(camionQueue);
-            //print_waiting_orders_queue(waitingOrderQueue);
             load_camion(camionQueue, camionCapacity);
         }
-        if (sscanf(line, "%s", command) == 1) {
-            char recipeName[50];
-            //printf("Current time: %d\n", time); //debug print
-            check_expiration_date(time);
-            if (strcmp(command, "aggiungi_ricetta") == 0) {
-                cursor += strlen(command) + 1;
-                if (sscanf(cursor, "%s", recipeName) != 1) {
-                    printf("Warning!\n");
-                    return 1;
-                }
-                cursor += strlen(recipeName) + 1;
-
-                Recipe *newRecipe = hash_table_lookup(recipeName);
-
-                if (newRecipe == NULL) {
-                    printf("%s", hash_table_insert(recipeName));
-                    newRecipe = hash_table_lookup(recipeName);
-                }
-                else {
-                    printf("ignorato\n");
-                    time++;
-                    continue;;
-                }
-
-                char ingredientName[255];
-                while (sscanf(cursor, "%s %d", ingredientName, &quantity) == 2) {
-                    recipe_insert_at_tail(newRecipe, ingredientName, quantity);
-                    cursor += strlen(ingredientName) + 1;
-                    while (*cursor == ' ') {
-                        cursor++;
-                    }
-                    cursor += snprintf(NULL, 0, "%d", quantity);
-                    while (*cursor == ' ') {
-                        cursor++;
-                    }
-                }
+        if (strcmp(command, "aggiungi_ricetta") == 0) {
+            char recipeName[MAX_NAME];
+            scanf("%s", recipeName);
+            Recipe *newRecipe = hash_table_lookup(recipeName);
+            if (newRecipe == NULL) {
+                hash_table_insert(recipeName);
+                newRecipe = hash_table_lookup(recipeName);
             }
-            else if (strcmp(command, "rimuovi_ricetta") == 0) {
-                cursor += strlen(command) + 1;
-                if (sscanf(cursor, "%s", recipeName) != 1) {
-                    printf("Warning!\n");
-                    return 1;
-                }
-                printf("%s", remove_recipe(recipeName, waitingOrderQueue, camionQueue));
+            else {
+                printf("ignorato\n");
+                while (getchar_unlocked() != '\n');
+                time++;
+                check_expiration_date(time);
+                continue;
             }
-            else if (strcmp(command, "rifornimento") == 0) {
-                char name[MAX_NAME];
-                cursor += strlen(command) + 1;
-                while (sscanf(cursor, "%s %d %d", name, &quantity, &expirationDate) == 3) {
-                    hash_table_warehouse_insert(name, quantity, expirationDate);
-                    cursor += strlen(name) + 1 + snprintf(NULL, 0, "%d", quantity) + 1 + snprintf(NULL, 0, "%d", expirationDate) + 1;
-                }
-                process_waiting_orders(waitingOrderQueue, camionQueue);
-                printf("%s", "rifornito\n");
+            while (getchar() != '\n'){
+                char ingredient[MAX_NAME];
+                scanf("%s %d", ingredient, &quantity);
+                recipe_insert_at_tail(newRecipe, ingredient, quantity);
             }
-            else if (strcmp(command, "ordine") == 0) {
-                char name[MAX_NAME];
-                cursor += strlen(command) + 1;
-                //printf("Debug: Command = %s\n", command); // Debug print)
-                if (sscanf(cursor, "%s %d", name, &numOfPieces) == 2) {
-                    //printf("Debug: Processing order for %s with %d pieces at time %d\n", name, numOfPieces, time); // Debug print
-
-                    if (hash_table_lookup(name) == NULL) {
-                        printf("%s", "rifiutato\n");
-                    }
-                    else {
-                        Order *newOrder = create_new_order(name, numOfPieces, time);
-                        process_order(newOrder, waitingOrderQueue, camionQueue);
-                    }
-                }
-            }
-            time++;
+            printf("aggiunta\n");
+            //print_cookbook();
         }
-        // Re-initialize the line at the end of each step
-        memset(line, 0, sizeof(line));
+        else if (strcmp(command, "rimuovi_ricetta") == 0) {
+            char recipeName[MAX_NAME];
+            scanf("%s", recipeName);
+            printf("%s", remove_recipe(recipeName, waitingOrderQueue, camionQueue)); // change this
+        }
+        else if (strcmp(command, "rifornimento") == 0) {
+            char name[MAX_NAME];
+            while (getchar_unlocked() != '\n'){
+            scanf("%s %d %d", name, &quantity, &expirationDate);
+                hash_table_warehouse_insert(name, quantity, expirationDate);
+            }
+            process_waiting_orders(waitingOrderQueue, camionQueue);
+            printf("%s", "rifornito\n");
+        }
+        else if (strcmp(command, "ordine") == 0) {
+            char name[MAX_NAME];
+            scanf("%s %d", name, &numOfPieces);
+            if (hash_table_lookup(name) == NULL) {
+                printf("%s", "rifiutato\n");
+                time++;
+                check_expiration_date(time);
+                continue;
+            }
+            Order *newOrder = create_new_order(name, numOfPieces, time);
+            process_order(newOrder, waitingOrderQueue, camionQueue);
+            printf("accettato\n");
+        }
+        time++;
+        check_expiration_date(time);
     }
     if (time != 0 && time % refillFrequency == 0) {
-        load_camion(camionQueue, camionCapacity);
-    }
-    return 0;
+    load_camion(camionQueue, camionCapacity);
+}
+
+free_everything(camionQueue, waitingOrderQueue);
+return 0;
 }
