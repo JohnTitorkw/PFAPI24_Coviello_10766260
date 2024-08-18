@@ -458,8 +458,8 @@ void check_expiration_date(int time) {
     }
 }
 
-int check_orders_executability(Order *order) {
-    Recipe *recipe = hash_table_cookbook_lookup(order->recipeName);
+int check_orders_executability(char *recipeName, int quantity) {
+    Recipe *recipe = hash_table_cookbook_lookup(recipeName);
     if (recipe == NULL) {
         printf("%s", "rifiutato\n");
         return -1;
@@ -470,7 +470,7 @@ int check_orders_executability(Order *order) {
         if (ingredient == NULL) {
             return 0; // missing ingredient
         }
-        int neededQuantity = current->ingredientQuantity * order->numberOfPieces;
+        int neededQuantity = current->ingredientQuantity * quantity;
         Batch *batch = ingredient->head;
         while (batch != NULL && neededQuantity > 0) { // iterate through batches and check availability
             if (batch->quantity >= neededQuantity) {
@@ -488,8 +488,8 @@ int check_orders_executability(Order *order) {
     return 1;
 }
 
-void execute_order(Order *order) {
-    Recipe *recipe = hash_table_cookbook_lookup(order->recipeName);
+void execute_order(char *recipeName, int quantity) {
+    Recipe *recipe = hash_table_cookbook_lookup(recipeName);
     if (recipe == NULL) {
         printf("Recipe not found\n");
         return;
@@ -506,7 +506,7 @@ void execute_order(Order *order) {
     }
     Batch *batch = ingredient->head;
     while (current != NULL) {
-        int neededQuantity = current->ingredientQuantity * order->numberOfPieces;
+        int neededQuantity = current->ingredientQuantity * quantity;
         while (batch != NULL && neededQuantity > 0) {
                 int ingredientReduction = batch->quantity;
                 batch->quantity -= neededQuantity;
@@ -533,6 +533,10 @@ void execute_order(Order *order) {
                     batch = batch->next;
                     free(temp);
                 }
+                else {
+                    break;
+                }
+
         }
         current = current->next;
         if (current != NULL) {
@@ -546,13 +550,13 @@ void execute_order(Order *order) {
     }
 }
 
-void process_order(Order *order, waitingOrderQueue *waitingQueue, camionQueue *camion_queue) {
-    if (check_orders_executability(order) == 1) {
-        execute_order(order);
-        camion_queue_sorted_insert(camion_queue, order->recipeName, order->numberOfPieces, order->arrivingTime);
+void process_order(char *recipeName, int quantity, int arrivingTime, waitingOrderQueue *waitingQueue, camionQueue *camion_queue) {
+    if (check_orders_executability(recipeName, quantity) == 1) {
+        execute_order(recipeName, quantity);
+        camion_queue_sorted_insert(camion_queue, recipeName, quantity, arrivingTime);
     }
     else {
-        waiting_orders_queue_sorted_insert(waitingQueue, order->recipeName, order->numberOfPieces, order->arrivingTime);
+        waiting_orders_queue_sorted_insert(waitingQueue, recipeName, quantity, arrivingTime);
     }
 }
 
@@ -560,8 +564,8 @@ void process_waiting_orders(waitingOrderQueue *waitingQueue, camionQueue *camion
     Order *current = waitingQueue->head;
     while (current != NULL) {
         Order *next = current->next; // save the next order before possibly freeing current
-        if (check_orders_executability(current) == 1) {
-            execute_order(current);
+        if (check_orders_executability(current->recipeName, current->numberOfPieces) == 1) {
+            execute_order(current->recipeName, current->numberOfPieces);
             camion_queue_sorted_insert(camion_queue, current->recipeName, current->numberOfPieces, current->arrivingTime);
 
             // remove the processed order from the waiting queue
@@ -777,8 +781,7 @@ int main() {
                 check_expiration_date(time);
                 continue;
             }
-            Order *newOrder = create_new_order(name, numOfPieces, time);
-            process_order(newOrder, waitingOrderQueue, camionQueue);
+            process_order(name, numOfPieces, time, waitingOrderQueue, camionQueue);
             printf("accettato\n");
         }
         time++;
