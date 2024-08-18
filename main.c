@@ -28,7 +28,6 @@ typedef struct camionQueue {
 typedef struct Batch {
     int expirationDate;
     int quantity;
-    bool isUsed;
     struct Batch *next;
     struct Batch *prev;
 } Batch;
@@ -112,7 +111,6 @@ Batch *create_new_batch(int quantity, int expirationDate) {
     assert (newBatch != NULL);
     newBatch->quantity = quantity;
     newBatch->expirationDate = expirationDate;
-    newBatch->isUsed = false;
     newBatch->next = NULL;
     newBatch->prev = NULL;
     return newBatch;
