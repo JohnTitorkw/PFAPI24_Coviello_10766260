@@ -43,6 +43,7 @@ warehouseIngredient *warehouse[TABLE_SIZE];
 typedef struct Ingredient {
     char ingredientName[MAX_NAME];
     int quantity;
+    unsigned int hashvalue;
     struct Ingredient *next;
 } Ingredient;
 
@@ -115,11 +116,23 @@ Batch *create_new_batch(int expirationDate, int quantity) {
     return newBatch;
 }
 
+unsigned int hash(const char *inputString) {
+    unsigned long hash = 5381;
+    int c;
+
+    while ((c = *inputString++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+
+    return hash % TABLE_SIZE;
+}
+
 Ingredient *create_new_ingredient(char ingredientName[], int quantity) {
     Ingredient *newIngredient = malloc(sizeof(Ingredient));
     assert(newIngredient != NULL);
     strcpy(newIngredient->ingredientName, ingredientName);
     newIngredient->quantity = quantity;
+    newIngredient->hashvalue = hash(ingredientName);
     newIngredient->next = NULL;
     return newIngredient;
 }
@@ -281,17 +294,6 @@ void init_hash_tables() {
     }
 }
 
-unsigned int hash(const char *inputString) {
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *inputString++)) {
-        hash = ((hash << 5) + hash) + c;
-    }
-
-    return hash % TABLE_SIZE;
-}
-
 Recipe *hash_table_cookbook_insert(char name[]) {
     assert(name != NULL);
     int index = hash(name);
@@ -355,9 +357,8 @@ char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQue
     return "rimossa\n";
 }
 
-void hash_table_warehouse_insert(char name[]) {
+void hash_table_warehouse_insert(char name[], int index) {
     assert (name != NULL);
-    int index = hash(name);
     warehouseIngredient *newIngredient = malloc(sizeof(warehouseIngredient));
     assert(newIngredient != NULL);
     strcpy(newIngredient->ingredientName, name);
@@ -388,8 +389,7 @@ void hash_table_warehouse_delete(char name[]) {
     free(tmp);
 }
 
-warehouseIngredient *hash_table_warehouse_lookup(char name[]) { //function to search elements inside the warehouse hash table (they could be merged)
-    int index = hash(name);
+warehouseIngredient *hash_table_warehouse_lookup(char name[], int index) { //function to search elements inside the warehouse hash table (they could be merged)
     warehouseIngredient *tmp = warehouse[index];
     while (tmp != NULL && strcmp(tmp->ingredientName , name) != 0) {
         tmp = tmp->next;
@@ -401,7 +401,7 @@ int check_order_exacutability(Order *order, Recipe *recipe) {
     Ingredient *current = recipe->head;
     while (current != NULL) {
         int neededQuantity = (current->quantity * order->numberOfPieces);
-        warehouseIngredient *ingredient = hash_table_warehouse_lookup(current->ingredientName);
+        warehouseIngredient *ingredient = hash_table_warehouse_lookup(current->ingredientName, current->hashvalue);
         if (ingredient == NULL) {
             return 0;
         }
@@ -452,7 +452,7 @@ void execute_order(Order *order, Recipe *recipe) {
     Ingredient *current = recipe->head;
     while (current != NULL) {
         int neededQuantity = (current->quantity * order->numberOfPieces);
-        warehouseIngredient *ingredient = hash_table_warehouse_lookup(current->ingredientName);
+        warehouseIngredient *ingredient = hash_table_warehouse_lookup(current->ingredientName, current->hashvalue);
         Batch *batch = ingredient->minimum;
         while (neededQuantity > 0) {
             if (batch->quantity > neededQuantity) { // if the batch has more than enough ingredients to satisfy the order quantity
@@ -470,39 +470,6 @@ void execute_order(Order *order, Recipe *recipe) {
         current = current->next; // go to the next ingredient
     }
 }
-
-/*
-void execute_order(Order *order, Recipe *recipe) {
-    Ingredient *current = recipe->head;
-    while (current != NULL) {
-        int neededQuantity = (current->quantity * order->numberOfPieces);
-        warehouseIngredient *ingredient = hash_table_warehouse_lookup(current->ingredientName);
-        Batch *batch = ingredient->minimum;
-
-        printf("Processing ingredient: %s\n", current->ingredientName);
-        printf("Needed quantity: %d\n", neededQuantity);
-        printf("Total quantity: %d\n", ingredient->totalQuantity);
-        while (neededQuantity > 0) {
-            printf("Current batch quantity: %d\n", batch->quantity);
-            if (batch->quantity > neededQuantity) { // if the batch has more than enough ingredients to satisfy the order quantity
-                batch->quantity -= neededQuantity; // subtract the needed quantity from the batch
-                ingredient->totalQuantity -= neededQuantity; // subtract the needed quantity from the total quantity of the ingredient
-                printf("Batch quantity after deduction: %d\n", batch->quantity);
-                printf("Total quantity after deduction: %d\n", ingredient->totalQuantity);
-                break; // exit the inner loop
-            }
-            neededQuantity -= batch->quantity; // otherwise subtract the batch quantity from the needed quantity
-            printf("Needed quantity after deduction: %d\n", neededQuantity);
-            Batch *successor = get_successor(batch); // get the successor of the batch
-            ingredient->totalQuantity -= batch->quantity; // subtract the batch quantity from the total quantity of the ingredient
-            delete_batch(&ingredient->root, batch); // delete the batch
-            batch = successor; // set the batch to the successor
-        }
-        ingredient->minimum = batch; // set the minimum to the batch because the previous batch was deleted and the actual batch is set to the successor of the deleted batch so it must be the new minimum
-        current = current->next; // go to the next ingredient
-    }
-}
-*/
 
 void check_waiting_orders(orderQueue *waitingOrdersQueue, orderQueue *camionQueue) {
     Order *tmp = waitingOrdersQueue->head;
@@ -754,10 +721,11 @@ int main() {
                 if (expirationDate <= time) {
                     continue;
                 }
-                if (hash_table_warehouse_lookup(ingredientName) == NULL) {
-                    hash_table_warehouse_insert(ingredientName);
+                unsigned int hashvalue = hash(ingredientName);
+                if (hash_table_warehouse_lookup(ingredientName, hashvalue) == NULL) {
+                    hash_table_warehouse_insert(ingredientName, hashvalue);
                 }
-                warehouseIngredient *ingredient = hash_table_warehouse_lookup(ingredientName);
+                warehouseIngredient *ingredient = hash_table_warehouse_lookup(ingredientName, hashvalue);
                 Batch *newBatch = create_new_batch(expirationDate, quantity);
                 ingredient->totalQuantity += quantity;
                 insert_batch(&ingredient->root, newBatch);
@@ -813,7 +781,6 @@ int main() {
                     */
                 }
                 else {
-                    //if(time == 97) printf("Ordine %d %s completatocl\n", newOrder->arrivingTime, newOrder->recipeName);
                     execute_order(newOrder, recipe);
                     queue_tail_insert(newOrder, camionQueue);
                 }
