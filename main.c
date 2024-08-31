@@ -4,12 +4,13 @@
 #include <assert.h>
 
 #define MAX_NAME 30
-#define TABLE_SIZE 10000
+#define TABLE_SIZE 15000
 
 //FILE *debugFile = NULL;
 
 typedef struct Order {
     char recipeName[MAX_NAME];
+    unsigned int hashvalue;
     int numberOfPieces;
     int arrivingTime;
     int weight;
@@ -56,13 +57,14 @@ typedef struct Recipe {
 
 Recipe *cookbook[TABLE_SIZE];
 
-Order *create_new_order(char recipeName[], int numOfPieces, int arrivingTime, int recipeWeight) {
+Order *create_new_order(char recipeName[], int numOfPieces, int arrivingTime, int recipeWeight, unsigned int recipeHash) {
     Order *newOrder = malloc(sizeof(Order));
     assert(newOrder != NULL);
     strcpy(newOrder->recipeName, recipeName);
     newOrder->numberOfPieces = numOfPieces;
     newOrder->arrivingTime = arrivingTime;
     newOrder->weight = recipeWeight * numOfPieces;
+    newOrder->hashvalue = recipeHash;
     newOrder->next = NULL;
     return newOrder;
 }
@@ -142,18 +144,6 @@ Batch *find_minimum(Batch *root) {
         root = root->left;
     }
     return root;
-}
-
-Batch *get_successor(Batch *node) {
-    if (node->right != NULL) {
-        return find_minimum(node->right);
-    }
-    Batch *parent = node->parent;
-    while (parent != NULL && node == parent->right) {
-        node = parent;
-        parent = parent->parent;
-    }
-    return parent;
 }
 
 void insert_batch(Batch **root_ptr, Batch *newBatch) {
@@ -294,15 +284,13 @@ void init_hash_tables() {
     }
 }
 
-Recipe *hash_table_cookbook_insert(char name[]) {
+Recipe *hash_table_cookbook_insert(char name[], unsigned int index) {
     assert(name != NULL);
-    int index = hash(name);
     Recipe *newRecipe = malloc(sizeof(Recipe));
     assert (newRecipe != NULL);
     strcpy(newRecipe->recipeName, name);
     newRecipe->weight = 0;
     newRecipe->head = NULL;
-
     newRecipe->next = cookbook[index];
     cookbook[index] = newRecipe;
     return newRecipe;
@@ -315,8 +303,7 @@ void hash_table_ingredient_insert(char name[], int quantity, Recipe *recipe) {
     recipe->head = newIngredient;
 }
 
-Recipe *hash_table_cookbook_lookup(char name[]) { //function to search elements inside the cookbook hash table
-    int index = hash(name);
+Recipe *hash_table_cookbook_lookup(char name[], unsigned int index) { //function to search elements inside the cookbook hash table
     Recipe *tmp = cookbook[index];
     while (tmp != NULL && strcmp(tmp->recipeName, name) != 0) {
         tmp = tmp->next;
@@ -324,16 +311,13 @@ Recipe *hash_table_cookbook_lookup(char name[]) { //function to search elements 
     return tmp;
 }
 
-char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQueue *camionQueue) {
-    int index = hash(name);
+char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQueue *camionQueue, unsigned int index) {
     Recipe *tmp = cookbook[index];
     Recipe *prev = NULL;
     while (tmp != NULL && strcmp(tmp->recipeName, name) != 0) {
         prev = tmp;
         tmp = tmp->next;
     }
-    //Recipe *tmp = hash_table_cookbook_lookup(name);
-
     if (tmp == NULL) {
         return "non presente\n";
     }
@@ -346,7 +330,6 @@ char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQue
     else {
         prev->next = tmp->next;
     }
-    // bisogna togliere tutti gli ingredienti dalla ricetta
     Ingredient *current = tmp->head;
     while (current != NULL) {
         Ingredient *toFree = current;
@@ -357,7 +340,7 @@ char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQue
     return "rimossa\n";
 }
 
-void hash_table_warehouse_insert(char name[], int index) {
+void hash_table_warehouse_insert(char name[], unsigned int index) {
     assert (name != NULL);
     warehouseIngredient *newIngredient = malloc(sizeof(warehouseIngredient));
     assert(newIngredient != NULL);
@@ -368,7 +351,7 @@ void hash_table_warehouse_insert(char name[], int index) {
     newIngredient->next = warehouse[index];
     warehouse[index] = newIngredient;
 }
-
+/*
 void hash_table_warehouse_delete(char name[]) {
     int index = hash(name);
     warehouseIngredient *tmp = warehouse[index];
@@ -388,8 +371,9 @@ void hash_table_warehouse_delete(char name[]) {
     }
     free(tmp);
 }
+*/
 
-warehouseIngredient *hash_table_warehouse_lookup(char name[], int index) { //function to search elements inside the warehouse hash table (they could be merged)
+warehouseIngredient *hash_table_warehouse_lookup(char name[], unsigned int index) { //function to search elements inside the warehouse hash table (they could be merged)
     warehouseIngredient *tmp = warehouse[index];
     while (tmp != NULL && strcmp(tmp->ingredientName , name) != 0) {
         tmp = tmp->next;
@@ -421,7 +405,6 @@ void waiting_orders_insert(Order *toInsert, orderQueue *camionQueue) {
         tmp = tmp->next;
     }
     tmp = oldTmp;
-    //assert(tmp != NULL);
     camionQueue->checkpoint = toInsert;
     if (tmp == NULL) { //insert at the head
         toInsert->next = camionQueue->head;
@@ -439,8 +422,6 @@ void waiting_orders_insert(Order *toInsert, orderQueue *camionQueue) {
         camionQueue->tail->next = toInsert;
         camionQueue->tail = toInsert;
         toInsert->next = NULL;
-        //tmp->next = toInsert;
-        //camionQueue->tail = toInsert;
     }
     else {
         toInsert->next = tmp->next;
@@ -461,7 +442,7 @@ void execute_order(Order *order, Recipe *recipe) {
                 break; // exit the inner loop
             }
             neededQuantity -= batch->quantity; // otherwise subtract the batch quantity from the needed quantity
-            Batch *successor = get_successor(batch); // get the successor of the batch
+            Batch *successor = tree_successor(batch); // get the successor of the batch
             ingredient->totalQuantity -= batch->quantity; // subtract the batch quantity from the total quantity of the ingredient
             delete_batch(&ingredient->root, batch); // delete the batch
             batch = successor; // set the batch to the successor
@@ -477,7 +458,7 @@ void check_waiting_orders(orderQueue *waitingOrdersQueue, orderQueue *camionQueu
     camionQueue->checkpoint = camionQueue->head;
 
     while (tmp != NULL) {
-        Recipe *recipe = hash_table_cookbook_lookup(tmp->recipeName);
+        Recipe *recipe = hash_table_cookbook_lookup(tmp->recipeName, tmp->hashvalue);
         Order *nextOrder = tmp->next;
 
         if (check_order_exacutability(tmp, recipe) == 1) {
@@ -513,7 +494,6 @@ void queue_sorted_loading_insert(Order **toInsert, orderQueue *queue) {
         oldTmp = tmp;
         tmp = tmp->next;
     }
-
     if (oldTmp == NULL) {
         newOrder->next = queue->head;
         queue->head = newOrder;
@@ -533,16 +513,12 @@ void queue_sorted_loading_insert(Order **toInsert, orderQueue *queue) {
     }
 }
 
-
-
 void print_order_queue(orderQueue *queue) {
     Order *tmp = queue->head;
     while (tmp != NULL) {
-        ///if(tmp == camionQueue->tail) printf("Trovata tail di camion queue\n");
         printf("%d %s %d\n", tmp->arrivingTime, tmp->recipeName, tmp->numberOfPieces);
         tmp = tmp->next;
     }
-    //if(camionQueue->tail) printf("Camion tail: %d %s\n", camionQueue->tail->arrivingTime, camionQueue->tail->recipeName);
 }
 
 void print_order_queue_debug(orderQueue *queue) {
@@ -561,7 +537,6 @@ void free_order_queue(orderQueue *queue) {
         free(toFree);
     }
 }
-
 
 void load_camion(orderQueue *camionQueue, int camionCapacity) {
     Order *tmp = camionQueue->head;
@@ -690,13 +665,14 @@ int main() {
                 printf ("Failed getting recipeName\n");
                 return 1;
             }
-            if (hash_table_cookbook_lookup(recipeName) != NULL) {
+            unsigned int hashvalue = hash(recipeName);
+            if (hash_table_cookbook_lookup(recipeName, hashvalue) != NULL) {
                 while (getchar_unlocked() != '\n');
                 printf("ignorato\n");
                 time++;
                 continue;
             }
-            Recipe *recipe = hash_table_cookbook_insert(recipeName);
+            Recipe *recipe = hash_table_cookbook_insert(recipeName, hashvalue);
             int recipeWeight=0;
             while (getchar_unlocked() != '\n'){
                 char ingredient[MAX_NAME];
@@ -747,38 +723,30 @@ int main() {
             if(camionQueue->tail) fprintf(debugFile,"CAMION QUEUE TAIL = %d %s %d\n", camionQueue->tail->arrivingTime, camionQueue->tail->recipeName, camionQueue->tail->numberOfPieces);
             */
 
-            /*
-            if(time == 97){
-                printf("DEBUG\n");
-            }
-            */
-
             char recipeName[MAX_NAME];
             int numOfPieces=0;
             if (!scanf("%s %d", recipeName, &numOfPieces)) {
                 printf("Failed getting orderName and numOfPieces\n");
                 return 1;
             }
-            Recipe *recipe = hash_table_cookbook_lookup(recipeName);
+            unsigned int hashvalue = hash(recipeName);
+            Recipe *recipe = hash_table_cookbook_lookup(recipeName, hashvalue);
             if (recipe == NULL) {
                 while (getchar_unlocked() != '\n');
                 printf("rifiutato\n");
             }
             else {
-                Order *newOrder = create_new_order(recipe->recipeName, numOfPieces, time, recipe->weight);
+                Order *newOrder = create_new_order(recipe->recipeName, numOfPieces, time, recipe->weight, hashvalue);
                 if (check_order_exacutability(newOrder, recipe) == 0) {
                     queue_tail_insert(newOrder, waitingQueue);
 
                     /*
-                    if(time == 114)
-                        printf("ORDINE %d %s SOSPESO\n", newOrder->arrivingTime, newOrder->recipeName);
-
-
                     printf("Ordini sospesi:\n");
                     print_order_queue(waitingQueue);
                     printf("Ordini completati:\n");
                     print_order_queue(camionQueue);
                     */
+
                 }
                 else {
                     execute_order(newOrder, recipe);
@@ -793,7 +761,8 @@ int main() {
                 printf ("Failed getting recipeName\n");
                 return 1;
             }
-            printf("%s", hash_table_cookbook_delete(recipeName, waitingQueue, camionQueue));
+            unsigned int hashvalue = hash(recipeName);
+            printf("%s", hash_table_cookbook_delete(recipeName, waitingQueue, camionQueue, hashvalue));
         }
         time++;
         for (int i = 0; i < TABLE_SIZE; i++) {
@@ -827,134 +796,8 @@ int main() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//CEMETERY
 /*
-void delete_batch(Batch **root_ptr) {
-    Batch *root = *root_ptr;
-    if (root == NULL) { //empty tree
-        return;
-    }
-    if (root->left == NULL && root->right == NULL) { // leaf case
-        if (root->parent == NULL) { //root node
-            free(root);
-            *root_ptr = NULL;
-        }
-        else if (root->parent->left == root) {
-            root->parent->left = NULL;
-            free(root);
-        }
-        else {
-            root->parent->right = NULL;
-            free(root);
-        }
-    }
-    else if (root->left == NULL) { //only right child
-        if (root->parent == NULL) { //root node
-            *root_ptr = root->right;
-            free(root);
-        }
-        else if (root->parent->left == root) {
-            root->parent->left = root->right;
-            free(root);
-        }
-        else {
-            root->parent->right = root->right;
-            free(root);
-        }
-    }
-    else if (root->right == NULL) { //only left child
-        if (root->parent == NULL) { //root node
-            *root_ptr = root->left;
-            free(root);
-        }
-        else if (root->parent->left == root) {
-            root->parent->left = root->left;
-            free(root);
-        }
-        else {
-            root->parent->right = root->left;
-            free(root);
-        }
-    }
-    else { //both children
-        Batch *tmp = root->right;
-        while (tmp->left != NULL) {
-            tmp = tmp->left;
-        }
-        root->expirationDate = tmp->expirationDate;
-        root->quantity = tmp->quantity;
-        delete_batch(&tmp);
-    }
-}
-
 void cascade_delete(Batch *root) {
     if (root == NULL) {
         return;
@@ -980,30 +823,5 @@ Batch *expired_batch(Batch *root, int expirationDate) {
         cascade_delete(result->left);
     }
     return result;
-}
-
-void load_camion(orderQueue *camionQueue, int camionCapacity) {
-    Order *tmp = camionQueue->head;
-    orderQueue *loadingQueue = init_queue();
-    while (tmp != NULL && camionCapacity >= tmp->weight) {
-        camionCapacity -= tmp->weight;
-        Order *orderToInsert = tmp;
-        queue_sorted_loading_insert(&orderToInsert, loadingQueue);
-        Order *toFree = tmp;
-        tmp = tmp->next;
-        camionQueue->head = tmp;
-        free(toFree);
-    }
-    print_order_queue(camionQueue);
-    print_order_queue(loadingQueue);
-
-    if (loadingQueue->head == NULL) {
-        printf("camioncino vuoto\n");
-    }
-    else {
-        print_order_queue(loadingQueue);
-    }
-
-    free_order_queue(loadingQueue);
 }
 */
