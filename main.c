@@ -39,7 +39,7 @@ typedef struct warehouseIngredient {
     struct warehouseIngredient *next;
 } warehouseIngredient;
 
-warehouseIngredient *warehouse[TABLE_SIZE];
+warehouseIngredient *warehouse[TABLE_SIZE] = {NULL};
 
 typedef struct Ingredient {
     char ingredientName[MAX_NAME];
@@ -55,7 +55,27 @@ typedef struct Recipe {
     struct Recipe *next;
 } Recipe;
 
-Recipe *cookbook[TABLE_SIZE];
+Recipe *cookbook[TABLE_SIZE] = {NULL};
+
+void print_warehouse_tree(Batch *root);
+void print_warehouse_table();
+void print_order_queue(orderQueue *queue);
+void print_order_queue_debug(orderQueue *queue);
+void print_ingredient_queue(Recipe *recipe);
+void print_cookbook_table();
+void free_ingredients(Ingredient *head);
+void free_batches(Batch *root);
+void free_hash_tables();
+
+unsigned int hash(const char *inputString) {
+    unsigned long hash = 5381;
+    int c;
+
+    while ((c = *inputString++)) {
+        hash = ((hash << 5) + hash) + c;
+    }
+    return hash % TABLE_SIZE;
+}
 
 Order *create_new_order(char recipeName[], int numOfPieces, int arrivingTime, int recipeWeight, unsigned int recipeHash) {
     Order *newOrder = malloc(sizeof(Order));
@@ -76,6 +96,27 @@ orderQueue *init_queue() {
     newQueue->head = NULL;
     newQueue->tail = NULL;
     return newQueue;
+}
+
+Batch *create_new_batch(int expirationDate, int quantity) {
+    Batch *newBatch = malloc(sizeof(Batch));
+    assert(newBatch != NULL);
+    newBatch->left = NULL;
+    newBatch->right = NULL;
+    newBatch->parent = NULL;
+    newBatch->quantity = quantity;
+    newBatch->expirationDate = expirationDate;
+    return newBatch;
+}
+
+Ingredient *create_new_ingredient(char ingredientName[], int quantity) {
+    Ingredient *newIngredient = malloc(sizeof(Ingredient));
+    assert(newIngredient != NULL);
+    strcpy(newIngredient->ingredientName, ingredientName);
+    newIngredient->quantity = quantity;
+    newIngredient->hashvalue = hash(ingredientName);
+    newIngredient->next = NULL;
+    return newIngredient;
 }
 
 void queue_tail_insert(Order *order, orderQueue *queue) {
@@ -105,38 +146,6 @@ int queue_lookup(Recipe *recipe, orderQueue *queue) {
         return 0;
     }
     return 1;
-}
-
-Batch *create_new_batch(int expirationDate, int quantity) {
-    Batch *newBatch = malloc(sizeof(Batch));
-    assert(newBatch != NULL);
-    newBatch->left = NULL;
-    newBatch->right = NULL;
-    newBatch->parent = NULL;
-    newBatch->quantity = quantity;
-    newBatch->expirationDate = expirationDate;
-    return newBatch;
-}
-
-unsigned int hash(const char *inputString) {
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *inputString++)) {
-        hash = ((hash << 5) + hash) + c;
-    }
-
-    return hash % TABLE_SIZE;
-}
-
-Ingredient *create_new_ingredient(char ingredientName[], int quantity) {
-    Ingredient *newIngredient = malloc(sizeof(Ingredient));
-    assert(newIngredient != NULL);
-    strcpy(newIngredient->ingredientName, ingredientName);
-    newIngredient->quantity = quantity;
-    newIngredient->hashvalue = hash(ingredientName);
-    newIngredient->next = NULL;
-    return newIngredient;
 }
 
 Batch *find_minimum(Batch *root) {
@@ -177,19 +186,6 @@ void insert_batch(Batch **root_ptr, Batch *newBatch) {
     }
 }
 
-Batch *find_batch(Batch *root, int expirationDate) {
-    if (root == NULL) {
-        return NULL;
-    }
-    if (root->expirationDate == expirationDate) {
-        return root;
-    }
-    if (expirationDate < root->expirationDate ) {
-        return find_batch(root->left, expirationDate);
-    }
-    return find_batch(root->right, expirationDate);
-}
-
 Batch *tree_successor(Batch *root) {
     if (root->right != NULL) {
         return find_minimum(root->right);
@@ -200,35 +196,6 @@ Batch *tree_successor(Batch *root) {
         parent = parent->parent;
     }
     return parent;
-}
-
-void print_warehouse_tree(Batch *root) {
-    if (root == NULL) {
-        return;
-    }
-    print_warehouse_tree(root->left);
-    printf("%d %d --- ", root->quantity, root->expirationDate);
-    print_warehouse_tree(root->right);
-}
-
-void print_warehouse_table() {
-    printf("Start\n");
-    for(int i=0; i<TABLE_SIZE; i++) {
-        if (warehouse[i] == NULL) {
-            printf("\t%i\t---\n",i);
-        }
-        else {
-            printf("\t%i\t",i);
-            warehouseIngredient *tmp = warehouse[i];
-            while ( tmp != NULL) {
-                printf("%s - ", tmp->ingredientName);
-                print_warehouse_tree(tmp->root);
-                tmp = tmp->next;
-            }
-            printf("\n");
-        }
-    }
-    printf("End\n");
 }
 
 void delete_batch(Batch **T, Batch *z) { //function to delete a node from the tree from Api slides
@@ -351,27 +318,6 @@ void hash_table_warehouse_insert(char name[], unsigned int index) {
     newIngredient->next = warehouse[index];
     warehouse[index] = newIngredient;
 }
-/*
-void hash_table_warehouse_delete(char name[]) {
-    int index = hash(name);
-    warehouseIngredient *tmp = warehouse[index];
-    warehouseIngredient *prev = NULL;
-    while (tmp != NULL && strcmp(tmp->ingredientName, name) != 0) {
-        prev = tmp;
-        tmp = tmp->next;
-    }
-    if (tmp == NULL) {
-        return;
-    }
-    if (prev == NULL) { //deleting the head
-        warehouse[index] = tmp->next;
-    }
-    else {
-        prev->next = tmp->next;
-    }
-    free(tmp);
-}
-*/
 
 warehouseIngredient *hash_table_warehouse_lookup(char name[], unsigned int index) { //function to search elements inside the warehouse hash table (they could be merged)
     warehouseIngredient *tmp = warehouse[index];
@@ -513,22 +459,6 @@ void queue_sorted_loading_insert(Order **toInsert, orderQueue *queue) {
     }
 }
 
-void print_order_queue(orderQueue *queue) {
-    Order *tmp = queue->head;
-    while (tmp != NULL) {
-        printf("%d %s %d\n", tmp->arrivingTime, tmp->recipeName, tmp->numberOfPieces);
-        tmp = tmp->next;
-    }
-}
-
-void print_order_queue_debug(orderQueue *queue) {
-    Order *tmp = queue->head;
-    while (tmp != NULL) {
-        printf("%d %s %d con peso %d\n", tmp->arrivingTime, tmp->recipeName, tmp->numberOfPieces, tmp->weight);
-        tmp = tmp->next;
-    }
-}
-
 void free_order_queue(orderQueue *queue) {
     Order *tmp = queue->head;
     while (tmp != NULL) {
@@ -572,74 +502,7 @@ void load_camion(orderQueue *camionQueue, int camionCapacity) {
     }
 
     free_order_queue(loadingQueue);
-}
-
-
-void free_ingredients(Ingredient *head) {
-    if (head == NULL) {
-        return;
-    }
-    free_ingredients(head->next);
-    free(head);
-}
-
-void free_batches(Batch *root) {
-    if (root == NULL) {
-        return;
-    }
-    free_batches(root->left);
-    free_batches(root->right);
-    delete_batch(&root, root);
-}
-
-void free_hash_tables() {
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        Recipe *tmp = cookbook[i];
-        while (tmp != NULL) {
-            free_ingredients(tmp->head);
-            Recipe *next = tmp->next;
-            free(tmp);
-            tmp = next;
-        }
-    }
-
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        warehouseIngredient *tmp = warehouse[i];
-        while (tmp != NULL) {
-            free_batches(tmp->root);
-            warehouseIngredient *next = tmp->next;
-            free(tmp);
-            tmp = next;
-        }
-    }
-}
-
-void print_ingredient_queue(Recipe *recipe) {
-    Ingredient *tmp = recipe->head;
-    while (tmp != NULL) {
-        printf("- %s %d --- ", tmp->ingredientName, tmp->quantity);
-        tmp = tmp->next;
-    }
-}
-
-void print_cookbook_table() {
-    printf("Start\n");
-    for(int i=0; i<TABLE_SIZE; i++) {
-        if (cookbook[i] == NULL) {
-            printf("\t%i\t---\n",i);
-        }
-        else {
-            printf("\t%i\t",i);
-            Recipe *tmp = cookbook[i];
-            while ( tmp != NULL) {
-                printf("%s - ", tmp->recipeName);
-                print_ingredient_queue(tmp);
-                tmp = tmp->next;
-            }
-            printf("\n");
-        }
-    }
-    printf("End\n");
+    free(loadingQueue);
 }
 
 int main() {
@@ -790,9 +653,127 @@ int main() {
 
     free_hash_tables();
     free_order_queue(waitingQueue);
+    free(waitingQueue);
     free_order_queue(camionQueue);
+    free(camionQueue);
     return 0;
 }
+
+
+//DEBUG FUNCTIONS
+void print_warehouse_tree(Batch *root) {
+    if (root == NULL) {
+        return;
+    }
+    print_warehouse_tree(root->left);
+    printf("%d %d --- ", root->quantity, root->expirationDate);
+    print_warehouse_tree(root->right);
+}
+
+void print_warehouse_table() {
+    printf("Start\n");
+    for(int i=0; i<TABLE_SIZE; i++) {
+        if (warehouse[i] == NULL) {
+            printf("\t%i\t---\n",i);
+        }
+        else {
+            printf("\t%i\t",i);
+            warehouseIngredient *tmp = warehouse[i];
+            while ( tmp != NULL) {
+                printf("%s - ", tmp->ingredientName);
+                print_warehouse_tree(tmp->root);
+                tmp = tmp->next;
+            }
+            printf("\n");
+        }
+    }
+    printf("End\n");
+}
+
+void print_order_queue(orderQueue *queue) {
+    Order *tmp = queue->head;
+    while (tmp != NULL) {
+        printf("%d %s %d\n", tmp->arrivingTime, tmp->recipeName, tmp->numberOfPieces);
+        tmp = tmp->next;
+    }
+}
+
+void print_order_queue_debug(orderQueue *queue) {
+    Order *tmp = queue->head;
+    while (tmp != NULL) {
+        printf("%d %s %d con peso %d\n", tmp->arrivingTime, tmp->recipeName, tmp->numberOfPieces, tmp->weight);
+        tmp = tmp->next;
+    }
+}
+
+void print_ingredient_queue(Recipe *recipe) {
+    Ingredient *tmp = recipe->head;
+    while (tmp != NULL) {
+        printf("- %s %d --- ", tmp->ingredientName, tmp->quantity);
+        tmp = tmp->next;
+    }
+}
+
+void print_cookbook_table() {
+    printf("Start\n");
+    for(int i=0; i<TABLE_SIZE; i++) {
+        if (cookbook[i] == NULL) {
+            printf("\t%i\t---\n",i);
+        }
+        else {
+            printf("\t%i\t",i);
+            Recipe *tmp = cookbook[i];
+            while ( tmp != NULL) {
+                printf("%s - ", tmp->recipeName);
+                print_ingredient_queue(tmp);
+                tmp = tmp->next;
+            }
+            printf("\n");
+        }
+    }
+    printf("End\n");
+}
+
+//FREE FUNCTIONS
+void free_ingredients(Ingredient *head) {
+    if (head == NULL) {
+        return;
+    }
+    free_ingredients(head->next);
+    free(head);
+}
+
+void free_batches(Batch *root) {
+    if (root == NULL) {
+        return;
+    }
+    free_batches(root->left);
+    free_batches(root->right);
+    delete_batch(&root, root);
+}
+
+void free_hash_tables() {
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        Recipe *tmp = cookbook[i];
+        while (tmp != NULL) {
+            free_ingredients(tmp->head);
+            Recipe *next = tmp->next;
+            free(tmp);
+            tmp = next;
+        }
+    }
+
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        warehouseIngredient *tmp = warehouse[i];
+        while (tmp != NULL) {
+            free_batches(tmp->root);
+            warehouseIngredient *next = tmp->next;
+            free(tmp);
+            tmp = next;
+        }
+    }
+}
+
 
 
 
