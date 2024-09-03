@@ -3,7 +3,6 @@
 #include <string.h>
 #include <assert.h>
 
-
 #define MAX_NAME 20
 #define TABLE_SIZE 15000
 
@@ -162,7 +161,6 @@ Ingredient *create_new_ingredient(char ingredientName[], int quantity) {
     newIngredient->next = NULL;
     return newIngredient;
 }
-
 
 void queue_tail_insert(Order *order, orderQueue *queue) {
     if (queue->head == NULL) {
