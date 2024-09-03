@@ -58,18 +58,9 @@ typedef struct orderQueue {
     Order *tail;
 } orderQueue;
 
-void print_warehouse_tree(Batch *root);
-void print_warehouse_table();
-void print_order_queue(orderQueue *queue);
-void print_order_queue_debug(orderQueue *queue);
-void print_ingredient_queue(Recipe *recipe);
-void print_cookbook_table();
-void print_order_vector(orderVector *orderVector);
-void print_batch_list(Batch *head);
 void free_ingredients(Ingredient *head);
 void free_hash_tables();
 void free_vector(orderVector *vector);
-
 
 unsigned int hash(const char *inputString) {
     unsigned long hash = 5381;
@@ -282,7 +273,6 @@ warehouseIngredient *hash_table_warehouse_lookup(char name[], unsigned int index
     return tmp;
 }
 
-
 int check_order_exacutability(Order *order, Recipe *recipe, int time) {
     Ingredient *current = recipe->head;
     while (current != NULL) {
@@ -396,7 +386,6 @@ void check_waiting_orders(orderQueue *waitingOrdersQueue, orderQueue *camionQueu
         tmp = nextOrder;
     }
 }
-
 
 void free_order_queue(orderQueue *queue) {
     Order *tmp = queue->head;
@@ -522,7 +511,6 @@ int main() {
                     continue;
                 }
                 unsigned int hashvalue = hash(ingredientName);
-
                 if (hash_table_warehouse_lookup(ingredientName, hashvalue) == NULL) {
                     hash_table_warehouse_insert(ingredientName, hashvalue);
                 }
@@ -569,114 +557,16 @@ int main() {
             printf("%s", hash_table_cookbook_delete(recipeName, waitingQueue, camionQueue, hashvalue));
         }
         time++;
-        /*
-        for (int i = 0; i < TABLE_SIZE; i++) {
-            warehouseIngredient *tmp = warehouse[i];
-            while (tmp != NULL) {
-                if (tmp->head != NULL && tmp->head->expirationDate <= time) {
-                    Batch *toDelete = tmp->head;
-                    tmp->head = tmp->head->next;
-                    tmp->totalQuantity -= toDelete->quantity;
-                    free(toDelete);
-                }
-                tmp = tmp->next;
-            }
-        }
-        */
-
         if (time % refillFrequency == 0) {
             load_camion(camionQueue, camionCapacity);
         }
     }
-
     free_hash_tables();
     free_order_queue(waitingQueue);
     free(waitingQueue);
     free_order_queue(camionQueue);
     free(camionQueue);
-
     return 0;
-}
-
-
-//DEBUG FUNCTIONS
-
-void print_batch_list(Batch *head) {
-    Batch *tmp = head;
-    while (tmp != NULL) {
-        printf("%d %d --- ", tmp->quantity, tmp->expirationDate);
-        tmp = tmp->next;
-    }
-}
-
-void print_warehouse_table() {
-    printf("Start\n");
-    for(int i=0; i<TABLE_SIZE; i++) {
-        if (warehouse[i] == NULL) {
-            printf("\t%i\t---\n",i);
-        }
-        else {
-            printf("\t%i\t",i);
-            warehouseIngredient *tmp = warehouse[i];
-            while ( tmp != NULL) {
-                printf("%s - ", tmp->ingredientName);
-                print_batch_list(tmp->head);
-                tmp = tmp->next;
-            }
-            printf("\n");
-        }
-    }
-    printf("End\n");
-}
-
-void print_order_queue(orderQueue *queue) {
-    Order *tmp = queue->head;
-    while (tmp != NULL) {
-        printf("%d %s %d\n", tmp->arrivingTime, tmp->recipe->recipeName, tmp->numberOfPieces);
-        tmp = tmp->next;
-    }
-}
-
-void print_order_queue_debug(orderQueue *queue) {
-    Order *tmp = queue->head;
-    while (tmp != NULL) {
-        printf("%d %s %d con peso %d\n", tmp->arrivingTime, tmp->recipe->recipeName, tmp->numberOfPieces, tmp->weight);
-        tmp = tmp->next;
-    }
-}
-
-void print_ingredient_queue(Recipe *recipe) {
-    Ingredient *tmp = recipe->head;
-    while (tmp != NULL) {
-        printf("- %s %d --- ", tmp->ingredientName, tmp->quantity);
-        tmp = tmp->next;
-    }
-}
-
-void print_cookbook_table() {
-    printf("Start\n");
-    for(int i=0; i<TABLE_SIZE; i++) {
-        if (cookbook[i] == NULL) {
-            printf("\t%i\t---\n",i);
-        }
-        else {
-            printf("\t%i\t",i);
-            Recipe *tmp = cookbook[i];
-            while ( tmp != NULL) {
-                printf("%s - ", tmp->recipeName);
-                print_ingredient_queue(tmp);
-                tmp = tmp->next;
-            }
-            printf("\n");
-        }
-    }
-    printf("End\n");
-}
-
-void print_order_vector(orderVector *vector) {
-    for (int i = 0; i < vector->size; i++) {
-        printf("%d %s %d\n", vector->order[i].arrivingTime, vector->order[i].recipe->recipeName, vector->order[i].numberOfPieces);
-    }
 }
 
 //FREE FUNCTIONS
@@ -713,194 +603,3 @@ void free_vector(orderVector *vector) {
     free(vector->order);
     free(vector);
 }
-
-//CEMETERY
-/*
-void cascade_delete(Batch *root) {
-    if (root == NULL) {
-        return;
-    }
-    cascade_delete(root->left);
-    cascade_delete(root->right);
-    delete_batch(&root, root);
-}
-
-Batch *expired_batch(Batch *root, int expirationDate) {
-    Batch *result = NULL;
-
-    while (root != NULL) {
-        if (root->expirationDate > expirationDate) {
-            result = root;
-            root = root->left;
-        }
-        else {
-            root = root->right;
-        }
-    }
-    if (result != NULL) {
-        cascade_delete(result->left);
-    }
-    return result;
-}
-
-void heap_insert(orderHeap *heap, Order *order) {
-    if (heap->size == heap->capacity) {
-        expand_heap(heap);
-    }
-    heap->order[heap->size] = *order;
-    heap->size++;
-    int i = heap->size - 1;
-    while (i > 0 && (heap->order[i].weight > heap->order[(i - 1) / 2].weight || (heap->order[i].weight == heap->order[(i - 1) / 2].weight && heap->order[i].arrivingTime < heap->order[(i - 1) / 2].arrivingTime))) {
-        Order tmp = heap->order[i];
-        heap->order[i] = heap->order[(i - 1) / 2];
-        heap->order[(i - 1) / 2] = tmp;
-        i = (i - 1) / 2;
-    }
-}
-
-void queue_sorted_loading_insert(Order **toInsert, orderQueue *queue) {
-    Order *newOrder = *toInsert;
-
-    Order *tmp = queue->head;
-    Order *oldTmp = NULL;
-
-    while (tmp != NULL && (tmp->weight > newOrder->weight || (tmp->weight == newOrder->weight && tmp->arrivingTime < newOrder->arrivingTime))) {
-        oldTmp = tmp;
-        tmp = tmp->next;
-    }
-    if (oldTmp == NULL) {
-        newOrder->next = queue->head;
-        queue->head = newOrder;
-
-        if (queue->tail == NULL) {
-            queue->tail = newOrder;
-        }
-    }
-    else if (tmp == NULL) {
-        oldTmp->next = newOrder;
-        newOrder->next = NULL;
-        queue->tail = newOrder;
-    }
-    else {
-        newOrder->next = oldTmp->next;
-        oldTmp->next = newOrder;
-    }
-}
-
-Batch *find_minimum(Batch *root) {
-    while (root->left != NULL) {
-        root = root->left;
-    }
-    return root;
-}
-
-void insert_batch(Batch **root_ptr, Batch *newBatch) {
-    Batch *root = *root_ptr;
-
-    if (root == NULL) { //tree empty || leaf node reached
-        *root_ptr = newBatch;
-    }
-    else if (root->expirationDate == newBatch->expirationDate) {
-        root->quantity += newBatch->quantity;
-        free(newBatch);
-    }
-    else if (newBatch->expirationDate < root->expirationDate) {
-        if (root->left == NULL) {
-            root->left = newBatch;
-            newBatch->parent = root;
-        }
-        else {
-            insert_batch(&root->left, newBatch);
-        }
-
-    }
-    else {
-        if (root->right == NULL) {
-            root->right = newBatch;
-            newBatch->parent = root;
-        }
-        else {
-            insert_batch(&root->right, newBatch);
-        }
-    }
-}
-
-Batch *tree_successor(Batch *root) {
-    if (root->right != NULL) {
-        return find_minimum(root->right);
-    }
-    Batch *parent = root->parent;
-    while (parent != NULL && root == parent->right) {
-        root = parent;
-        parent = parent->parent;
-    }
-    return parent;
-}
-
-void delete_batch(Batch **T, Batch *z) { //function to delete a node from the tree from Api slides
-    Batch *y = NULL;
-    Batch *x = NULL;
-    if (z->left == NULL || z->right == NULL) {
-        y = z;
-    }
-    else {
-        y = tree_successor(z);
-    }
-    if (y->left != NULL) {
-        x = y->left;
-    }
-    else {
-        x = y->right;
-    }
-    if (x != NULL) {
-        x->parent = y->parent;
-    }
-    if (y->parent == NULL) {
-        *T = x;
-    }
-    else if (y == y->parent->left) {
-        y->parent->left = x;
-    }
-    else {
-        y->parent->right = x;
-    }
-    if (y != z) {
-        z->expirationDate = y->expirationDate;
-        z->quantity = y->quantity;
-    }
-    free(y);
-}
-
-void delete_minimum(warehouseIngredient *ingredient) {
-    Batch *minimum = ingredient->minimum;
-    if (minimum->right != NULL) {
-        ingredient->minimum = find_minimum(minimum->right);
-    }
-    else {
-        ingredient->minimum = minimum->parent;
-    }
-    ingredient->totalQuantity -= minimum->quantity;
-    delete_batch(&ingredient->root, minimum);
-}
-
-void free_batches(Batch *root) {
-    if (root == NULL) {
-        return;
-    }
-    free_batches(root->left);
-    free_batches(root->right);
-    delete_batch(&root, root);
-}
-
-void delete_minimum(warehouseIngredient *tmp) {
-    Batch *minimum = tmp->minimum;
-    if (minimum->next != NULL) {
-        tmp->minimum = minimum->next;
-    }
-    else {
-        tmp->minimum = NULL;
-    }
-    tmp->totalQuantity -= minimum->quantity;
-    free(minimum);
-}
-*/
