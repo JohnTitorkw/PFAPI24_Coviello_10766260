@@ -59,6 +59,7 @@ typedef struct orderQueue {
     Order *tail;
 } orderQueue;
 
+void print_order_vector(orderVector *orderVector);
 void free_ingredients(Ingredient *head);
 void free_hash_tables();
 void free_vector(orderVector *vector);
@@ -568,6 +569,12 @@ int main() {
     free_order_queue(camionQueue);
     free(camionQueue);
     return 0;
+}
+
+void print_order_vector(orderVector *vector) {
+    for (int i = 0; i < vector->size; i++) {
+        printf("%d %s %d\n", vector->order[i].arrivingTime, vector->order[i].recipe->recipeName, vector->order[i].numberOfPieces);
+    }
 }
 
 //FREE FUNCTIONS
