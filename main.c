@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <tgmath.h>
 
 #define MAX_NAME 20
@@ -65,7 +64,7 @@ void free_hash_tables();
 void free_vector(orderVector *vector);
 
 unsigned int hash(const char *inputString) {
-    assert(inputString != NULL);
+    //assert(inputString != NULL);
     unsigned long hash = 5387;
     short int c;
 
@@ -77,7 +76,7 @@ unsigned int hash(const char *inputString) {
 
 Order *create_new_order(Recipe *recipe, int numOfPieces, int arrivingTime, int recipeWeight, unsigned int recipeHash) {
     Order *newOrder = malloc(sizeof(Order));
-    assert(newOrder != NULL);
+    //assert(newOrder != NULL);
     newOrder->recipe = recipe;
     newOrder->numberOfPieces = numOfPieces;
     newOrder->arrivingTime = arrivingTime;
@@ -89,9 +88,9 @@ Order *create_new_order(Recipe *recipe, int numOfPieces, int arrivingTime, int r
 
 orderVector *init_vector(int capacity) {
     orderVector *newVector = malloc(sizeof(orderVector));
-    assert(newVector != NULL);
+    //assert(newVector != NULL);
     newVector->order = malloc(capacity * sizeof(Order));
-    assert(newVector->order != NULL);
+    //assert(newVector->order != NULL);
     newVector->size = 0;
     newVector->capacity = capacity;
     return newVector;
@@ -100,7 +99,7 @@ orderVector *init_vector(int capacity) {
 void expand_vector(orderVector *vector) {
     vector->capacity += vector->capacity/2;
     vector->order = realloc(vector->order, vector->capacity * sizeof(Order));
-    assert(vector->order != NULL);
+    //assert(vector->order != NULL);
 }
 
 void vector_insert(orderVector *vector, Order *tmp) {
@@ -138,7 +137,7 @@ void quicksort(orderVector *vector, int p, int r) {
 
 orderQueue *init_queue() {
     orderQueue *newQueue = malloc(sizeof(orderQueue));
-    assert(newQueue != NULL);
+    //assert(newQueue != NULL);
     newQueue->checkpoint = NULL;
     newQueue->head = NULL;
     newQueue->tail = NULL;
@@ -147,7 +146,7 @@ orderQueue *init_queue() {
 
 Batch *create_new_batch(int expirationDate, int quantity) {
     Batch *newBatch = malloc(sizeof(Batch));
-    assert(newBatch != NULL);
+    //assert(newBatch != NULL);
     newBatch->next = NULL;
     newBatch->quantity = quantity;
     newBatch->expirationDate = expirationDate;
@@ -156,7 +155,7 @@ Batch *create_new_batch(int expirationDate, int quantity) {
 
 Ingredient *create_new_ingredient(char ingredientName[], int quantity) {
     Ingredient *newIngredient = malloc(sizeof(Ingredient));
-    assert(newIngredient != NULL);
+    //assert(newIngredient != NULL);
     strcpy(newIngredient->ingredientName, ingredientName);
     newIngredient->quantity = quantity;
     newIngredient->hashvalue = hash(ingredientName);
@@ -201,9 +200,9 @@ void init_hash_tables() {
 }
 
 Recipe *hash_table_cookbook_insert(char name[], unsigned int index) {
-    assert(name != NULL);
+    //assert(name != NULL);
     Recipe *newRecipe = malloc(sizeof(Recipe));
-    assert (newRecipe != NULL);
+    //assert (newRecipe != NULL);
     strcpy(newRecipe->recipeName, name);
     newRecipe->weight = 0;
     newRecipe->head = NULL;
@@ -213,7 +212,7 @@ Recipe *hash_table_cookbook_insert(char name[], unsigned int index) {
 }
 
 void hash_table_ingredient_insert(char name[], int quantity, Recipe *recipe) {
-    assert(name != NULL);
+    //assert(name != NULL);
     Ingredient *newIngredient = create_new_ingredient(name, quantity);
     newIngredient->next = recipe->head;
     recipe->head = newIngredient;
@@ -257,9 +256,9 @@ char *hash_table_cookbook_delete(char name[], orderQueue *waitingQueue, orderQue
 }
 
 void hash_table_warehouse_insert(char name[], unsigned int index) {
-    assert (name != NULL);
+    //assert (name != NULL);
     warehouseIngredient *newIngredient = malloc(sizeof(warehouseIngredient));
-    assert(newIngredient != NULL);
+    //assert(newIngredient != NULL);
     strcpy(newIngredient->ingredientName, name);
     newIngredient->totalQuantity = 0;
     newIngredient->head = NULL;
