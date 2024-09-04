@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <tgmath.h>
 
 #define MAX_NAME 20
 #define TABLE_SIZE 15000
@@ -64,11 +65,12 @@ void free_hash_tables();
 void free_vector(orderVector *vector);
 
 unsigned int hash(const char *inputString) {
-    unsigned long hash = 5381;
+    assert(inputString != NULL);
+    unsigned long hash = 5387;
     short int c;
 
     while ((c = *inputString++)) {
-        hash = ((hash << 5) + hash) + c;
+        hash = ((hash * (sqrt(5)-1)/2) + hash) + c;
     }
     return hash % TABLE_SIZE;
 }
